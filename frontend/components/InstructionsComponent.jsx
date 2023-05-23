@@ -1,80 +1,137 @@
 import styles from "../styles/InstructionsComponent.module.css";
 import Router, { useRouter } from "next/router";
+import { useSigner, useNetwork, useBalance } from 'wagmi';
+import { useState, useEffect } from 'react';
+
 export default function InstructionsComponent() {
 	const router = useRouter();
 	return (
 		<div className={styles.container}>
 			<header className={styles.header_container}>
 				<h1>
-					create<span>-web3-dapp</span>
+					My dApper
 				</h1>
-				<p>
-					Get started by editing this page in{" "}
-					<span>/pages/index.js</span>
-				</p>
 			</header>
 
 			<div className={styles.buttons_container}>
-				<a
-					target={"_blank"}
-					href={"https://createweb3dapp.alchemy.com/#components"}
-				>
-					<div className={styles.button}>
-						{/* <img src="https://static.alchemyapi.io/images/cw3d/Icon%20Medium/lightning-square-contained-m.svg" width={"20px"} height={"20px"} /> */}
-						<p>Add Components</p>
-					</div>
-				</a>
-				<a
-					target={"_blank"}
-					href={"https://createweb3dapp.alchemy.com/#templates"}
-				>
-					<div className={styles.button}>
-						{/* <img src="https://static.alchemyapi.io/images/cw3d/Icon%20Medium/lightning-square-contained-m.svg" width={"20px"} height={"20px"} /> */}
-						<p>Explore Templates</p>
-					</div>
-				</a>
-				<a
-					target={"_blank"}
-					href={"https://docs.alchemy.com/docs/create-web3-dapp"}
-				>
-					<div className={styles.button}>
-						<img
-							src="https://static.alchemyapi.io/images/cw3d/Icon%20Large/file-eye-01-l.svg"
-							width={"20px"}
-							height={"20px"}
-						/>
-						<p>Visit Docs</p>
-					</div>
-				</a>
+				<PageBody></PageBody>
 			</div>
 			<div className={styles.footer}>
-				<a href="https://alchemy.com/?a=create-web3-dapp" target={"_blank"}>
-					<img
-						id="badge-button"
-						style={{ width: "240px", height: "53px" }}
-						src="https://static.alchemyapi.io/images/marketing/badgeLight.png"
-						alt="Alchemy Supercharged"
-					/>
-				</a>
-				<div className={styles.icons_container}>
-					<div>
-						<a
-							href="https://github.com/alchemyplatform/create-web3-dapp"
-							target={"_blank"}
-						>
-							Leave a star on Github
-						</a>
-					</div>
-					<div>
-						<a
-							href="https://twitter.com/AlchemyPlatform"
-							target={"_blank"}
-						>
-							Follow us on Twitter
-						</a>
-					</div>
-				</div>
+				Foooter
 			</div>
 		</div>
 	);
+}
+
+function PageBody() {
+	return(
+		<div>
+			<WalletInfo></WalletInfo>
+			<ApiInfo></ApiInfo>
+			<RequestTokens></RequestTokens>
+		</div>
+	)
+}
+
+function WalletInfo() {
+	const { data: signer, isError, isLoading } = useSigner();
+	const { chain, chains } = useNetwork();
+	if (signer) return (
+		<>
+			<p>Your account address is {signer._address}</p>
+			<p>Connected to the {chain.name} network</p>
+			<button onClick={() => signMessage(signer, "I love fried potatoes")}>Sign</button>
+			<WalletBalance></WalletBalance>
+		</>
+	)
+	if (isLoading) return (
+		<>
+			<p>Wait a while, the wallet is loading</p>
+		</>
+	)
+	return (
+		<>
+			<p>Connect a wallet</p>
+		</>
+	)
+}
+
+function WalletBalance() {
+	const { data: signer } = useSigner();
+	const { data, isError, isLoading } = useBalance({
+		address: signer._address,
+	})
+
+	if (isLoading) return <div>Fetching balance...</div>
+	if (isError) return <div>error fetching balance</div>
+	return (
+		<div>
+			Balance: {data?.formatted} {data?.symbol}
+		</div>
+		)
+}
+
+function signMessage(signer, message) {
+	signer.signMessage(message).then(
+		(signature) => {console.log(signature)},
+		(error) => {console.log(error)})
+}
+
+function ApiInfo() {
+	const [data, setData] = useState(null);
+	const [isLoading, setLoading] = useState(false);
+   
+	useEffect(() => {
+	  setLoading(true);
+	  fetch('https://random-data-api.com/api/v2/users')
+		.then((res) => res.json())
+		.then((data) => {
+		  setData(data);
+		  setLoading(false);
+		});
+	}, []);
+   
+	if (isLoading) return <p>Loading...</p>;
+	if (!data) return <p>No profile data</p>;
+   
+	return (
+	  <div>
+		<h1>{data.username}</h1>
+		<p>{data.email}</p>
+	  </div>
+	);
+}
+
+function RequestTokens() {
+	const { data: signer } = useSigner();
+	const [txData, setTxData] = useState(null);
+	const [isLoading, setLoading] = useState(false);
+	if (txData) return (
+		<div>
+			<p>Transaction completed!</p>
+			<a href={"https://mumbai.polygonscan.com/tx/" + txData.hash} target="_blank">{txData.hash}</a>
+		</div>
+	)
+	if (isLoading) return <p>Requesting tokens to be minted...</p>;
+	return (
+		<div>
+			<button onClick={() => requestTokens(signer, "0.01", setLoading, setTxData)}>
+				Request 1.0 MTK Token</button>
+		</div>
+	)
+}
+
+function requestTokens(signer, amount, setLoading, setTxData) {
+	setLoading(true);
+	const requestOptions = {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ address: signer._address, amount: amount })
+	};
+	fetch('http://localhost:3001/request-tokens', requestOptions)
+		.then(response => response.json())
+		.then((data) => {
+			setTxData(data);
+			setLoading(true);
+	});
 }
