@@ -28,7 +28,10 @@ function PageBody() {
 		<div>
 			<WalletInfo></WalletInfo>
 			<ApiInfo></ApiInfo>
-			<RequestTokens></RequestTokens>
+      <RequestTokens></RequestTokens>
+      <DelegateVotes />
+      <Vote />
+
 		</div>
 	)
 }
@@ -134,4 +137,42 @@ function requestTokens(signer, amount, setLoading, setTxData) {
 			setTxData(data);
 			setLoading(true);
 	});
+}
+
+function DelegateVotes() {
+	const { data: signer } = useSigner();
+	const [txData, setTxData] = useState(null);
+	const [isLoading, setLoading] = useState(false);
+	if (txData) return (
+		<div>
+			<p>Transaction completed!</p>
+			<a href={"https://mumbai.polygonscan.com/tx/" + txData.hash} target="_blank">{txData.hash}</a>
+		</div>
+	)
+	if (isLoading) return <p>Requesting tokens to be minted...</p>;
+	return (
+    <div>
+			<button onClick={() => delegateVotes(signer, "0.01", setLoading, setTxData)}>
+				Delegate Votes</button>
+		</div>
+	)
+}
+
+function Vote() {
+	const { data: signer } = useSigner();
+	const [txData, setTxData] = useState(null);
+	const [isLoading, setLoading] = useState(false);
+	if (txData) return (
+		<div>
+			<p>Transaction completed!</p>
+			<a href={"https://mumbai.polygonscan.com/tx/" + txData.hash} target="_blank">{txData.hash}</a>
+		</div>
+	)
+	if (isLoading) return <p>Requesting tokens to be minted...</p>;
+	return (
+    <div>
+			<button onClick={() => Vote(signer, "0.01", setLoading, setTxData)}>
+				Vote on Proposal</button>
+		</div>
+	)
 }
